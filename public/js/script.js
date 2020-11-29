@@ -36,6 +36,11 @@ function handleMouseClick(evt) {
         showingWinScreen = false;
     }
 }
+let players_count;
+socket.on('playing mode', (DATA) => {
+    players_count = DATA;
+    console.log(players_count);
+});
 
 window.onload = function () {
     canvas = document.getElementById('gameCanvas');
@@ -43,8 +48,21 @@ window.onload = function () {
 
     var framesPerSecond = 30;
     setInterval(function () {
-        moveEverything();
-        drawEverything();
+        
+        if (players_count == 2) {
+            moveEverything();
+            drawEverything();
+        }
+        else if (players_count == 1) {
+            colorRect(0, 0, canvas.width, canvas.height, 'black');
+            canvasContext.fillStyle = 'white';
+            canvasContext.fillText("Wait for opponent to join", 350, 200);
+        }
+        else if (players_count > 2) {
+            colorRect(0, 0, canvas.width, canvas.height, 'black');
+            canvasContext.fillStyle = 'white';
+            canvasContext.fillText("Room is Full", 350, 200);
+        }
     }, 1000 / framesPerSecond);
 
     canvas.addEventListener('mousedown', handleMouseClick);
@@ -70,17 +88,9 @@ function ballReset() {
 }
 
 function computerMovement() {
-    setInterval(function(){
-        socket.on('opponent',data=>{
-            paddle2Y=data;
-        });
-    }, 1000 / 30);
-    // var paddle2YCenter = paddle2Y + (PADDLE_HEIGHT / 2);
-    // if (paddle2YCenter < ballY - 35) {
-    //     paddle2Y = paddle2Y + 6;
-    // } else if (paddle2YCenter > ballY + 35) {
-    //     paddle2Y = paddle2Y - 6;
-    // }
+    socket.on('opponent', data => {
+        paddle2Y = data;
+    });
 }
 
 function moveEverything() {
@@ -176,6 +186,6 @@ function colorRect(leftX, topY, width, height, drawColor) {
     canvasContext.fillStyle = drawColor;
     canvasContext.fillRect(leftX, topY, width, height);
 }
-setInterval(function(){
-    socket.emit('me',paddle1Y);
+setInterval(function () {
+    socket.emit('me', paddle1Y);
 }, 1000 / 30);
