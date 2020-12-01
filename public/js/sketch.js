@@ -1,22 +1,25 @@
 
-const socket = io('http://localhost:5000');
-var canvas;
-var canvasContext;
 var ballX = 50;
 var ballY = 50;
 var ballSpeedX = 10;
 var ballSpeedY = 4;
-
+var WINNING_SCORE = 12345678;
 var player1Score = 0;
 var player2Score = 0;
-const WINNING_SCORE = 3;
 
 var showingWinScreen = false;
 
 var paddle1Y = 250;
 var paddle2Y = 250;
-const PADDLE_THICKNESS = 10;
-const PADDLE_HEIGHT = 100;
+var PADDLE_THICKNESS = 10;
+var PADDLE_HEIGHT = 100;
+
+
+var starts = false;
+var playerTwo = false;
+var canvas = document.getElementById('gameCanvas');
+var canvasContext = canvas.getContext('2d');
+canvasContext.font = "24px Arial"
 
 function calculateMousePos(evt) {
     var rect = canvas.getBoundingClientRect();
@@ -29,51 +32,93 @@ function calculateMousePos(evt) {
     };
 }
 
-function handleMouseClick(evt) {
-    if (showingWinScreen) {
-        player1Score = 0;
-        player2Score = 0;
-        showingWinScreen = false;
-    }
-}
-let players_count;
-socket.on('playing mode', (DATA) => {
-    players_count = DATA;
-    console.log(players_count);
+colorRect(0, 0, canvas.width, canvas.height, '#0008FE');
+canvasContext.fillStyle = 'white';
+canvasContext.fillText("Send your room-id to opponent to join", 350, 250);
+socket.emit("start");
+
+socket.on('playerTwo', () => {
+    playerTwo = true;
+    starts = true;
+    fx();
 });
 
-window.onload = function () {
-    canvas = document.getElementById('gameCanvas');
-    canvasContext = canvas.getContext('2d');
 
-    var framesPerSecond = 30;
-    setInterval(function () {
-        
-        if (players_count == 2) {
+socket.on('updated', (data1) => {
+
+    ballX = data1.ballX
+    ballY = data1.ballY
+    ballSpeedX = data1.ballSpeedX
+    ballSpeedY = data1.ballSpeedY
+    player1Score = data1.player1Score
+    player2Score = data1.player2Score
+    paddle2Y = data1.paddle2Y
+    starts = data1.starts
+    fx();
+});
+
+// on disconnect reset variables
+socket.on('dc', () => {
+    playerTwo = false;
+    starts = false;
+    player1Score = 0;
+    player2Score = 0;
+    showingWinScreen = true;
+    colorRect(0, 0, canvas.width, canvas.height, '#0008FE');
+    canvasContext.fillStyle = 'white';
+    canvasContext.fillText("Opponent has left", 350, 250);
+
+});
+
+
+
+
+function fx() {
+
+    //playerone
+    if (playerTwo == false) {
+        drawEverything();
+        socket.emit("paddle", paddle1Y);
+    }
+    else {
+        var framesPerSecond = 30;
+        setInterval(function () {
+            let data = {
+                ballX: ballX,
+                ballY: ballY,
+                ballSpeedX: ballSpeedX,
+                ballSpeedY: ballSpeedY,
+                player1Score: player1Score,
+                player2Score: player2Score,
+                paddle2Y: paddle2Y,
+                starts: starts
+            }
+            socket.emit("update", data);
             moveEverything();
+            
             drawEverything();
-        }
-        else if (players_count == 1) {
-            colorRect(0, 0, canvas.width, canvas.height, 'black');
-            canvasContext.fillStyle = 'white';
-            canvasContext.fillText("Wait for opponent to join", 350, 200);
-        }
-        else if (players_count > 2) {
-            colorRect(0, 0, canvas.width, canvas.height, 'black');
-            canvasContext.fillStyle = 'white';
-            canvasContext.fillText("Room is Full", 350, 200);
-        }
-    }, 1000 / framesPerSecond);
+            socket.on("XXX", (data2)=>{
+                    paddle1Y=data2;
+            });
+        }, 1000 / framesPerSecond);
+    }
 
-    canvas.addEventListener('mousedown', handleMouseClick);
 
-    canvas.addEventListener('mousemove',
-        function (evt) {
-            var mousePos = calculateMousePos(evt);
-            paddle1Y = mousePos.y - (PADDLE_HEIGHT / 2);
-        });
 }
+// canvas.addEventListener('mousedown', handleMouseClick);
 
+canvas.addEventListener('mousemove',
+    function (evt) {
+        var mousePos = calculateMousePos(evt);
+        if(playerTwo==false)
+        {
+            paddle1Y = mousePos.y - (PADDLE_HEIGHT / 2);
+        }
+        else
+        {
+            paddle2Y = mousePos.y - (PADDLE_HEIGHT / 2);
+        }
+    });
 function ballReset() {
     if (player1Score >= WINNING_SCORE ||
         player2Score >= WINNING_SCORE) {
@@ -86,19 +131,13 @@ function ballReset() {
     ballX = canvas.width / 2;
     ballY = canvas.height / 2;
 }
-
-function computerMovement() {
-    socket.on('opponent', data => {
-        paddle2Y = data;
-    });
-}
-
 function moveEverything() {
-    if (showingWinScreen) {
+    if (!starts) {
         return;
     }
 
-    computerMovement();
+    if (playerTwo == false)
+        return;
 
     ballX = ballX + ballSpeedX;
     ballY = ballY + ballSpeedY;
@@ -136,27 +175,11 @@ function moveEverything() {
         ballSpeedY = -ballSpeedY;
     }
 }
-
-function drawNet() {
-    for (var i = 0; i < canvas.height; i += 40) {
-        colorRect(canvas.width / 2 - 1, i, 2, 20, 'white');
-    }
-}
-
 function drawEverything() {
     // next line blanks out the screen with black
-    colorRect(0, 0, canvas.width, canvas.height, 'black');
+    colorRect(0, 0, canvas.width, canvas.height, '#0008FE');
 
-    if (showingWinScreen) {
-        canvasContext.fillStyle = 'white';
-
-        if (player1Score >= WINNING_SCORE) {
-            canvasContext.fillText("Left Player Won", 350, 200);
-        } else if (player2Score >= WINNING_SCORE) {
-            canvasContext.fillText("Right Player Won", 350, 200);
-        }
-
-        canvasContext.fillText("click to continue", 350, 500);
+    if (!starts) {
         return;
     }
 
@@ -173,7 +196,9 @@ function drawEverything() {
 
     canvasContext.fillText(player1Score, 100, 100);
     canvasContext.fillText(player2Score, canvas.width - 100, 100);
+
 }
+
 
 function colorCircle(centerX, centerY, radius, drawColor) {
     canvasContext.fillStyle = drawColor;
@@ -186,6 +211,10 @@ function colorRect(leftX, topY, width, height, drawColor) {
     canvasContext.fillStyle = drawColor;
     canvasContext.fillRect(leftX, topY, width, height);
 }
-setInterval(function () {
-    socket.emit('me', paddle1Y);
-}, 1000 / 30);
+
+
+function drawNet() {
+    for (var i = 0; i < canvas.height; i += 40) {
+        colorRect(canvas.width / 2 - 1, i, 2, 20, 'white');
+    }
+}
