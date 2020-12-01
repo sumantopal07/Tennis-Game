@@ -19,7 +19,7 @@ var starts = false;
 var playerTwo = false;
 var canvas = document.getElementById('gameCanvas');
 var canvasContext = canvas.getContext('2d');
-canvasContext.font = "24px Arial"
+canvasContext.font = "28px Arial"
 
 function calculateMousePos(evt) {
     var rect = canvas.getBoundingClientRect();
