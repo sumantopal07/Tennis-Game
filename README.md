@@ -31,5 +31,4 @@ npm run dev
 
 ### References  
 
-[1] https://youtu.be/jD7FnbI76Hg  
-[2] https://socket.io/docs/v3/emit-cheatsheet/index.html 
+ https://youtu.be/jD7FnbI76Hg  
