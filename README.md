@@ -21,10 +21,10 @@ npm run dev
 
 ## Screeenshots
 
-#### Test 1
+#### Login Page
 ![](images/x1.png) 
 
-#### Test 2
+#### Game Demo
 ![](images/x2.png) 
 
 
